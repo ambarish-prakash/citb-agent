@@ -10,9 +10,7 @@ from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
 )
 from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
-from utilities import get_invalid_actions, get_invalid_actions2
-
-import pdb
+from utilities import get_invalid_actions
 
 class MaskedQNetwork(QNetwork):
     def __init__(
@@ -48,7 +46,7 @@ class MaskedQNetwork(QNetwork):
     
     def negate_invalid_action_values(self, q_values, observations):
         NEGATIVE_VAL = -100
-        invalid_actions = get_invalid_actions2(observations)
+        invalid_actions = get_invalid_actions(observations)
         q_values = torch.where(invalid_actions, NEGATIVE_VAL, q_values)
 
         return q_values

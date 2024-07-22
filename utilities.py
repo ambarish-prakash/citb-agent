@@ -92,60 +92,7 @@ def _print_board(places):
         print(f'{disp_mapping[val]}\t', end='')
     print("")
 
-def get_invalid_actions(observations: torch.Tensor) -> torch.Tensor:
-        N = observations.shape[0]
-        invalid_actions = torch.zeros((N, 43) )
-        INVALID_VAL = 1
-
-        # Invalidate (set to high negative) q values for action if board space used up
-        for i in range(32):
-            mask = observations[:,i+4] != 0
-            invalid_actions[:, i+11] = torch.where(mask, INVALID_VAL, invalid_actions[:, i+11])
-
-        # Where no card number to play Invalidate q values for discard and play_card action
-        for i in range(8):
-            mask = observations[:, i+36] == 0
-            # Discard card
-            invalid_actions[:, i] = torch.where(mask, INVALID_VAL, invalid_actions[:, i])
-            # Play card
-            for offset in [0, 8, 16, 24]:
-                invalid_actions[:, i+11+offset] = torch.where(mask, INVALID_VAL, invalid_actions[:, i+11+offset])
-
-        # Invalidate q values for action where the color is not available
-        for i in range(4):
-            mask = observations[:, i+52] == 0
-            fill_tensor = torch.full((invalid_actions.shape[0], 19-11), INVALID_VAL)
-            invalid_actions[:, 11+i*8:19+i*8] = torch.where(mask[:,None], fill_tensor, invalid_actions[:, 11+i*8:19+i*8])
-
-        # Invalidate q values for action if starting with red when you cannot
-        mask1 = observations[:, 80] == 0
-        mask2 = torch.all(observations[:, 4:12] == 0, dim=1)
-        final_mask = torch.logical_and(mask1, mask2).unsqueeze(1)
-        fill_tensor = torch.full((invalid_actions.shape[0], 19-11), INVALID_VAL)
-        invalid_actions[:, 11:19] = torch.where(final_mask, fill_tensor, invalid_actions[:, 11:19])
-        
-        
-        # Invalidate q values for actions based on game phase
-        # Discard phase
-        mask = observations[:, 1] == 1
-        fill_tensor = torch.full((invalid_actions.shape[0], 43-8), INVALID_VAL)
-        invalid_actions[:, 8:43] = torch.where(mask[:, None], fill_tensor, invalid_actions[:, 8:43])
-
-        # Bet phase
-        mask = observations[:, 2] == 1
-        fill_tensor = torch.full((invalid_actions.shape[0], 8-0), INVALID_VAL)
-        invalid_actions[:, 0:8] = torch.where(mask[:, None], fill_tensor, invalid_actions[:, 0:8])
-        fill_tensor = torch.full((invalid_actions.shape[0], 43-11), INVALID_VAL)
-        invalid_actions[:, 11:43] = torch.where(mask[:, None], fill_tensor, invalid_actions[:, 11:43])
-
-        # Play phase
-        mask = observations[:, 3] == 1
-        fill_tensor = torch.full((invalid_actions.shape[0], 11-0), INVALID_VAL)
-        invalid_actions[:, 0:11] = torch.where(mask[:, None], fill_tensor, invalid_actions[:, 0:11])
-
-        return invalid_actions.bool()
-
-def get_invalid_actions2(observations: torch.Tensor, device='cpu') -> torch.Tensor:
+def get_invalid_actions(observations: torch.Tensor, device='cpu') -> torch.Tensor:
     N = observations.shape[0]
     invalid_actions = torch.zeros((N, 43), dtype=torch.bool).to(device)
     INVALID_VAL = True
